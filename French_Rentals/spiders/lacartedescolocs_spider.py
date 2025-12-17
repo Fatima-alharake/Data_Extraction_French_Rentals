@@ -17,39 +17,28 @@ class LaCarteDesColocsSpider(scrapy.Spider):
 
     def parse_home(self, response):
         if response.status == 200:
-            self.logger.info("✅ Asking for Sitemap...")
             yield scrapy.Request(
                 url="https://www.lacartedescolocs.fr/sitemap.xml",
                 callback=self.parse_sitemap,
                 meta={"impersonate": self.impersonate_browser}
             )
-        else:
-            self.logger.error(f"❌ Error {response.status}")
 
     def parse_sitemap(self, response):
         xml_text = response.text
-        
         raw_urls = re.findall(r'<loc>(.*?)</loc>', xml_text)
         
         listing_urls = []
         for url in raw_urls:
             url = url.strip()
-            
             if "/colocations/" not in url:
                 continue
-                
             if "/paris/" not in url:
                 continue
-                
             if "/a/" not in url:
                 continue
-
             listing_urls.append(url)
 
-        # Eliminar duplicados
         listing_urls = list(set(listing_urls))
-
-        self.logger.info(f"🎉 Found {len(listing_urls)} valid listings.")
 
         for url in listing_urls:
             yield scrapy.Request(
@@ -62,37 +51,71 @@ class LaCarteDesColocsSpider(scrapy.Spider):
         json_data_raw = response.css('div#listing_data::attr(data-json)').get()
 
         if not json_data_raw:
-            self.logger.warning(f"⚠️  JSON not found {response.url}")
             return
 
         try:
             data = json.loads(json_data_raw)
         except json.JSONDecodeError:
-            self.logger.error(f"⚠️ Error decoding JSON {response.url}")
             return
 
         description = data.get('description', '').lower()
-        floor = None
+        floor_val = None
+        
         if "rdc" in description or "rez-de-chaussée" in description:
-            floor = "0"
+            floor_val = "Rez-de-chaussée"
         elif "duplex" in description:
-            floor = "Duplex"
+            floor_val = "Duplex"
         else:
             m = re.search(r"(\d+)(?:ème|er)?\s*étage", description)
-            if m: floor = m.group(1)
+            if m: 
+                num = m.group(1)
+                suffix = "er" if num == "1" else "ème"
+                floor_val = f"{num}{suffix} étage"
 
-        is_furnished = "Oui" if data.get('furnished') is True else "Non"
+        rooms_val = None
+        if data.get('lodging_size'):
+            rooms_val = str(data.get('lodging_size'))
+        elif data.get('lodging_size_string'):
+            m_rooms = re.search(r'(\d+)', str(data.get('lodging_size_string')))
+            if m_rooms:
+                rooms_val = m_rooms.group(1)
 
-        yield {
-            "AdUrl": response.url,
-            "AdTitle": data.get('main_title'),
-            "RentalPrice_EUR": data.get('cost_total_rent'),
-            "RentalAddrese": f"{data.get('address_street', '')}, {data.get('address_city', '')}",
-            "RentalSize_m2": data.get('lodging_surface'),
-            "RentalRooms": data.get('lodging_size_string'), 
-            "RentalFloor": floor,
-            "RentalType": data.get('lodging_type_string'),
-            "Furnished": is_furnished,
-            "Lat": data.get('latitude'),
-            "Lon": data.get('longitude')
-        }
+        item = {}
+        
+        item["AdUrl"] = response.url
+        
+        if data.get('main_title'):
+            item["AdTitle"] = data.get('main_title')
+            
+        if data.get('cost_total_rent'):
+            item["RentalPrice_EUR"] = str(data.get('cost_total_rent'))
+            
+        street = data.get('address_street', '')
+        city = data.get('address_city', '')
+        if street and city:
+            item["RentalAddrese"] = f"{street}, {city}"
+        elif city:
+            item["RentalAddrese"] = city
+            
+        if data.get('lodging_surface'):
+            item["RentalSize_m2"] = str(data.get('lodging_surface'))
+            
+        if rooms_val:
+            item["RentalRooms"] = rooms_val
+            
+        if floor_val:
+            item["RentalFloor"] = floor_val
+            
+        if data.get('lodging_type_string'):
+            item["RentalType"] = data.get('lodging_type_string')
+            
+        if data.get('furnished') is True:
+            item["Furnished"] = "Meublé"
+        
+        if data.get('latitude'):
+            item["Lat"] = str(data.get('latitude'))
+            
+        if data.get('longitude'):
+            item["Lon"] = str(data.get('longitude'))
+
+        yield item
