@@ -1,0 +1,4 @@
+# Data Analysis Dependencies
+pandas
+matplotlib
+numpy
