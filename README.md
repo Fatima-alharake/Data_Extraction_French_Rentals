@@ -117,3 +117,4 @@ CREATE TABLE rentals (
     latitude REAL,
     longitude REAL
 );
+```
