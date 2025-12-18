@@ -29,6 +29,8 @@ CREATE TABLE LaCarteDesColocs(
     RentalFloor NVARCHAR(25) NULL,
     RentalType NVARCHAR(100) NULL,
     Furnished NVARCHAR(25) NULL,
+    Latitude FLOAT NOT NULL,
+    Longitude FLOAT NOT NULL,
 
     CONSTRAINT UQ_laCarteDesColocs_AdUrlHash UNIQUE (AdUrlHash)
 );
@@ -50,8 +52,8 @@ COALESCE(NULLIF(RentalType, N''), N'-') AS RentalType,
 COALESCE(
     NULLIF(
         REPLACE(
-            REPLACE(Furnished, N'Meublé', N'True'),
-            N'Non meublé', N'False'
+            REPLACE(Furnished, N'Meublï¿½', N'True'),
+            N'Non meublï¿½', N'False'
         ),
         N''
     ),
@@ -77,7 +79,7 @@ FROM OPENROWSET(
     SINGLE_NCLOB
 ) AS datasource;
 
-insert into LaCarteDesColocs(AdUrl, AdTitle, RentalPrice_EUR, RentalAddrese, RentalSize_m2, RentalRooms, RentalFloor, RentalType, Furnished)
+insert into LaCarteDesColocs(AdUrl, AdTitle, RentalPrice_EUR, RentalAddrese, RentalSize_m2, RentalRooms, RentalFloor, RentalType, Furnished, Latitude, Longitude)
 select AdUrl, AdTitle, 
 TRY_CAST(NULLIF(RentalPrice_EUR, N'') AS INT) AS RentalPrice_EUR, 
 COALESCE(NULLIF(RentalAddrese, N''), N'-') AS RentalAddrese,
@@ -88,13 +90,16 @@ COALESCE(NULLIF(RentalType, N''), N'-') AS RentalType,
 COALESCE(
     NULLIF(
         REPLACE(
-            REPLACE(Furnished, N'Meublé', N'True'),
-            N'Non meublé', N'False'
+            REPLACE(Furnished, N'Meublï¿½', N'True'),
+            N'Non meublï¿½', N'False'
         ),
         N''
     ),
     N'-'
-) AS Furnished from openjson(@json_data)
+) AS Furnished,
+TRY_CAST(Lat AS FLOAT) AS Latitude,
+TRY_CAST(Lon AS FLOAT) AS Longitude
+from openjson(@json_data)
 WITH (
     AdUrl               VARCHAR(MAX)    '$.AdUrl',
     AdTitle             NVARCHAR(255)   '$.AdTitle',
@@ -104,7 +109,9 @@ WITH (
     RentalRooms         NVARCHAR(100)   '$.RentalRooms',
     RentalFloor         NVARCHAR(25)    '$.RentalFloor',
     RentalType          NVARCHAR(100)   '$.RentalType',
-    Furnished           NVARCHAR(25)    '$.Furnished'
+    Furnished           NVARCHAR(25)    '$.Furnished',
+    Lat                 NVARCHAR(25)    '$.Lat',
+    Lon                 NVARCHAR(25)    '$.Lon'
 );
 
 select * from Studapart
