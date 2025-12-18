@@ -61,3 +61,59 @@ Once the file is created, you can run it using the standard `scrapy crawl [spide
 
 ---
 
+## Data Analysis Module
+
+This folder contains scripts for processing, storing, and visualizing the Paris rental data collected by the web scrapers.
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `merge_data.py` | Merges JSON outputs from multiple spiders into a single dataset |
+| `create_database.py` | Creates SQLite database with proper schema and indexes |
+| `sql_queries.sql` | Collection of SQL queries for data analysis |
+| `visualizations.py` | Python script to generate charts and plots |
+
+### Usage
+
+#### Merge Data
+```bash
+python merge_data.py
+```
+**Input:** `output_studapart.json`, `output_lacartedescolocs.json`  
+**Output:** `merged_rentals.json`
+
+#### Create Database
+```bash
+python create_database.py
+```
+**Input:** `merged_rentals.json`  
+**Output:** `paris_rentals.db`
+
+#### Generate Visualizations
+```bash
+python visualizations.py
+```
+**Input:** `paris_rentals.db`  
+**Output:** `plots/` directory with PNG images
+
+### Database Schema
+
+```sql
+CREATE TABLE rentals (
+    id TEXT PRIMARY KEY,
+    source TEXT,              -- 'studapart' or 'lacartedescolocs'
+    url TEXT,
+    title TEXT,
+    price_eur REAL,
+    address TEXT,
+    arrondissement TEXT,      -- Extracted from address (01-20)
+    size_m2 REAL,
+    price_per_m2 REAL,        -- Calculated field
+    rooms INTEGER,
+    floor TEXT,
+    rental_type TEXT,
+    furnished TEXT,
+    latitude REAL,
+    longitude REAL
+);
