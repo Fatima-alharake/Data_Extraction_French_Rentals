@@ -8,5 +8,5 @@ The URL itself is not used as a primary key. Using a long string as a primary ke
 Geographic coordinates (latitude and longitude) are stored as FLOAT values. The DECIMAL data type was avoided because it caused precision issues in SQL Server and did not reliably preserve decimal points.  
 Each scraped JSON file is loaded into its corresponding table. Before insertion, NULL values are handled as follows:
 * For string-based fields, NULL values are replaced with '-' to ensure consistency when displaying data.
-* For numeric fields, NULL values are preserved to accurately represent missing data.
+* For numeric fields, NULL values are preserved to accurately represent missing data.  
 These tables are structured to support efficient querying and can be directly used to display rental listings from both platforms in a unified and consistent format.
